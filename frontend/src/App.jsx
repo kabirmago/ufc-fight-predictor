@@ -195,21 +195,13 @@ export default function App() {
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
       <nav style={{
         padding: '20px 40px', display: 'flex', alignItems: 'center',
-        justifyContent: 'space-between', borderBottom: '1px solid var(--border)'
+        borderBottom: '1px solid var(--border)'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <div style={{ width: 28, height: 28, background: 'var(--accent)', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <span style={{ fontSize: 14, color: '#000', fontWeight: 700 }}>⬡</span>
           </div>
           <span style={{ fontWeight: 600, fontSize: 15, letterSpacing: '-0.01em' }}>UFC Predictor</span>
-        </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          {result && [
-            { label: `${result.model_accuracy}% CV`, color: 'var(--accent)' },
-            { label: `${result.n_fights_trained.toLocaleString()} fights`, color: 'var(--muted)' }
-          ].map(b => (
-            <span key={b.label} style={{ padding: '4px 12px', borderRadius: 20, border: '1px solid var(--border)', fontSize: 11, color: b.color }}>{b.label}</span>
-          ))}
         </div>
       </nav>
 
