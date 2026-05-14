@@ -25,9 +25,6 @@ const DATA = loadData();
 
 function sigmoid(x) { return 1 / (1 + Math.exp(-x)); }
 
-// Compress probabilities toward 50% to reduce overconfidence from career averages.
-// A logistic surrogate on career stats pushes extreme matchups too far.
-// This shrinks by 15% toward 0.5 — so 93% -> 84%, 75% -> 71%, 58% -> 57%.
 function dampCalibration(p, factor = 0.15) {
   return 0.5 + (p - 0.5) * (1 - factor);
 }
@@ -46,7 +43,7 @@ function computeFeatures(s1, s2) {
   const td_def_diff  = s1.td_def  - s2.td_def;
   const sub_diff     = s1.sub_avg - s2.sub_avg;
   const net_strike   = (s1.slpm * (s1.str_acc / 100) - s1.sapm * (1 - s1.str_def / 100)) - (s2.slpm * (s2.str_acc / 100) - s2.sapm * (1 - s2.str_def / 100));
-  const net_grapple  = (s1.td_avg * (s1.td_acc / 100) + s1.td_def / 100) - (s2.td_avg * (s2.td_acc / 100) + s2.td_def / 100);
+  const net_grapple  = (s1.td_avg * (s1.td_acc / 100 + .01) * (s1.td_def / 100 + .01)) - (s2.td_avg * (s2.td_acc / 100 + .01) * (s2.td_def / 100 + .01));
   const style_mm     = (s1.slpm > 4 && s1.td_avg < 1 && s2.td_avg > 2 && s2.slpm < 3.5) ? 1 : 0;
   const def_ratio    = s2.str_def ? s1.str_def / s2.str_def : 1.0;
   return { slpm_diff, str_acc_diff, sapm_diff, str_def_diff, td_diff, td_acc_diff, td_def_diff, sub_diff, net_strike_edge: net_strike, net_grapple_edge: net_grapple, style_mismatch: style_mm, def_ratio };
@@ -60,16 +57,7 @@ function runModel(feats) {
   return dampCalibration(sigmoid(logit));
 }
 
-// Landing page at root
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, '../landing.html'));
-});
-
-// React app at /app
-app.get('/app', (req, res) => {
-  res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
-});
-
+// API routes first
 app.get('/api/fighters', (req, res) => {
   const q = (req.query.q || '').toLowerCase();
   const matches = q.length < 2
@@ -115,10 +103,15 @@ app.post('/api/predict', (req, res) => {
   });
 });
 
-// Static files — AFTER route handlers
+// Old landing page available at /landing for reference
+app.get('/landing', (req, res) => {
+  res.sendFile(path.join(__dirname, '../landing.html'));
+});
+
+// Serve React build — handles ALL routes including /
 app.use(express.static(path.join(__dirname, '../frontend/dist')));
 
-// Fallback
+// Catch-all: always serve React index.html (client-side routing)
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
 });
