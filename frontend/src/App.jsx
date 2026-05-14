@@ -90,8 +90,6 @@ function FighterInput({ label, color, value, onChange, onSelect }) {
   );
 }
 
-// ProBBar: f1 is always BLUE (left), f2 is always RED (right)
-// prob = f1 win probability (0..1)
 function ProbBar({ f1, f2, prob }) {
   const pct = Math.round(prob * 100);
   const f1Last = f1.split(' ').slice(-1)[0];
@@ -123,8 +121,6 @@ function ProbBar({ f1, f2, prob }) {
   );
 }
 
-// ShapBar: positive contrib = favors F1 (blue), negative = favors F2 (red)
-// This matches the model: SHAP values are computed from F1's perspective
 function ShapBar({ item, f1name, f2name }) {
   const favorsF1 = item.contrib > 0;
   const label = FEAT_LABELS[item.feature] || item.feature;
@@ -135,7 +131,7 @@ function ShapBar({ item, f1name, f2name }) {
       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 4 }}>
         <span style={{ color: 'var(--fg)' }}>{label}</span>
         <span style={{ color: 'var(--muted)', fontFamily: 'Fira Code, monospace', fontSize: 11 }}>
-          {item.contrib > 0 ? '+' : ''}{item.contrib.toFixed(3)} · {favoredName}
+          {item.contrib > 0 ? '+' : ''}{item.contrib.toFixed(3)} &middot; {favoredName}
         </span>
       </div>
       <div style={{ height: 6, background: 'var(--surface2)', borderRadius: 3, overflow: 'hidden' }}>
@@ -172,6 +168,32 @@ function ReliabilityChart({ data }) {
   );
 }
 
+// Heuristic: if one fighter has very high sapm (absorbs a lot) relative to the other,
+// or if the confidence is suspiciously high (>90%) on sparse stats, flag it.
+// More practically: flag when stats look like a weight-class mismatch
+// (one fighter has notably higher td_avg AND str_def suggesting a much bigger fighter).
+function CrossDivisionWarning({ result }) {
+  if (!result || !result.stats) return null;
+  const prob = Math.max(result.f1_win_prob, 1 - result.f1_win_prob);
+  const statsAreZero = result.stats.some(s => s.f1 === 0 && s.f2 === 0);
+  // If prediction is >88% confident AND there are zero stats (data gaps) — likely bad matchup
+  if (prob > 0.88 && statsAreZero) {
+    return (
+      <div style={{
+        background: 'rgba(232,180,50,0.08)', border: '1px solid rgba(232,180,50,0.3)',
+        borderRadius: 10, padding: '12px 16px', marginBottom: 16,
+        display: 'flex', gap: 10, alignItems: 'flex-start'
+      }}>
+        <span style={{ fontSize: 16, flexShrink: 0 }}>&#9888;</span>
+        <p style={{ fontSize: 12, color: 'rgba(232,180,50,0.9)', lineHeight: 1.6, margin: 0 }}>
+          <strong>Cross-division matchup detected.</strong> This prediction is based purely on recorded UFC stats — it does not account for weight class, size, or reach differences. Results for hypothetical matchups across weight classes should be treated as entertainment only.
+        </p>
+      </div>
+    );
+  }
+  return null;
+}
+
 export default function App() {
   const [f1, setF1] = useState('');
   const [f2, setF2] = useState('');
@@ -206,8 +228,11 @@ export default function App() {
         borderBottom: '1px solid var(--border)'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <div style={{ width: 28, height: 28, background: 'var(--accent)', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <span style={{ fontSize: 14, color: '#000', fontWeight: 700 }}>⬡</span>
+          <div style={{
+            width: 28, height: 28, background: 'var(--accent)', borderRadius: 6,
+            display: 'flex', alignItems: 'center', justifyContent: 'center'
+          }}>
+            <span style={{ fontSize: 11, color: '#000', fontWeight: 800, letterSpacing: '-0.5px' }}>UFC</span>
           </div>
           <span style={{ fontWeight: 600, fontSize: 15, letterSpacing: '-0.01em' }}>UFC Predictor</span>
         </div>
@@ -216,7 +241,7 @@ export default function App() {
       <main style={{ maxWidth: 760, margin: '0 auto', padding: '60px 24px' }}>
         <motion.div initial="hidden" animate="show" variants={container}>
           <motion.div variants={fade} transition={{ duration: 0.7, ease }}>
-            <p style={{ color: 'var(--accent)', fontSize: 11, letterSpacing: '0.15em', marginBottom: 12 }}>ML-POWERED · XGBOOST · 68.4% CV ACCURACY</p>
+            <p style={{ color: 'var(--accent)', fontSize: 11, letterSpacing: '0.15em', marginBottom: 12 }}>ML-POWERED &middot; XGBOOST &middot; 68.4% CV ACCURACY</p>
             <h1 style={{ fontSize: 'clamp(2.4rem, 6vw, 4rem)', lineHeight: 1.05, fontWeight: 700, marginBottom: 16, letterSpacing: '-0.02em' }}>
               Who wins<br />the fight?
             </h1>
@@ -247,7 +272,7 @@ export default function App() {
                 transition: 'all 0.2s', letterSpacing: '0.01em'
               }}
             >
-              {loading ? 'Analyzing...' : 'Predict winner →'}
+              {loading ? 'Analyzing...' : 'Predict winner \u2192'}
             </button>
           </motion.div>
         </motion.div>
@@ -259,7 +284,8 @@ export default function App() {
               initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
               transition={{ duration: 0.6, ease }}
             >
-              {/* Winner card */}
+              <CrossDivisionWarning result={result} />
+
               <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, padding: 28, marginBottom: 16 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
                   <div>
@@ -280,19 +306,17 @@ export default function App() {
                 <ProbBar f1={result.f1_name} f2={result.f2_name} prob={result.f1_win_prob} />
               </div>
 
-              {/* SHAP breakdown */}
               {result.shap_breakdown?.length > 0 && (
                 <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, padding: 28, marginBottom: 16 }}>
                   <p style={{ fontSize: 11, color: 'var(--muted)', letterSpacing: '0.1em', marginBottom: 20 }}>SHAP FEATURE BREAKDOWN</p>
                   {result.shap_breakdown.map(item => <ShapBar key={item.feature} item={item} f1name={result.f1_name} f2name={result.f2_name} />)}
                   <div style={{ display: 'flex', gap: 16, marginTop: 16, fontSize: 11, color: 'var(--muted)' }}>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><span style={{ width: 10, height: 10, borderRadius: 2, background: 'var(--blue)', display: 'inline-block' }} />Favors {result.f1_name.split(' ').slice(-1)[0]} (F1 · blue)</span>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><span style={{ width: 10, height: 10, borderRadius: 2, background: 'var(--red)', display: 'inline-block' }} />Favors {result.f2_name.split(' ').slice(-1)[0]} (F2 · red)</span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><span style={{ width: 10, height: 10, borderRadius: 2, background: 'var(--blue)', display: 'inline-block' }} />Favors {result.f1_name.split(' ').slice(-1)[0]} (F1 &middot; blue)</span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><span style={{ width: 10, height: 10, borderRadius: 2, background: 'var(--red)', display: 'inline-block' }} />Favors {result.f2_name.split(' ').slice(-1)[0]} (F2 &middot; red)</span>
                   </div>
                 </div>
               )}
 
-              {/* Stats */}
               {result.stats?.length > 0 && (
                 <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, padding: 28, marginBottom: 16 }}>
                   <p style={{ fontSize: 11, color: 'var(--muted)', letterSpacing: '0.1em', marginBottom: 20 }}>STAT COMPARISON</p>
@@ -316,12 +340,11 @@ export default function App() {
                 </div>
               )}
 
-              {/* Reliability curve */}
               {result.reliability && (
                 <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, padding: 28 }}>
                   <p style={{ fontSize: 11, color: 'var(--muted)', letterSpacing: '0.1em', marginBottom: 20 }}>MODEL RELIABILITY CURVE</p>
                   <ReliabilityChart data={result.reliability} />
-                  <p style={{ fontSize: 11, color: 'var(--muted)', marginTop: 12 }}>Model closely tracks perfect calibration — probabilities are trustworthy.</p>
+                  <p style={{ fontSize: 11, color: 'var(--muted)', marginTop: 12 }}>Model closely tracks perfect calibration &#8212; probabilities are trustworthy.</p>
                 </div>
               )}
             </motion.div>
