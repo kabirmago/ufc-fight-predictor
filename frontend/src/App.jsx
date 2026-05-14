@@ -1,356 +1,402 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Line } from 'react-chartjs-2';
-import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Tooltip } from 'chart.js';
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip);
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(
+  import.meta.env.VITE_SUPABASE_URL,
+  import.meta.env.VITE_SUPABASE_ANON_KEY
+);
 
 const FEAT_LABELS = {
-  slpm_diff: 'Strike output', str_acc_diff: 'Strike accuracy', sapm_diff: 'Strikes absorbed',
-  str_def_diff: 'Strike defense', td_diff: 'Takedown diff', td_acc_diff: 'Takedown accuracy',
-  td_def_diff: 'Takedown defense', sub_diff: 'Submission threat',
-  net_strike_edge: 'Net strike edge', net_grapple_edge: 'Net grapple edge',
-  style_mismatch: 'Style mismatch', def_ratio: 'Defense ratio'
+  net_strike_edge: 'Net strike edge', sub_diff: 'Submission threat',
+  slpm_diff: 'Strike output', def_ratio: 'Defense ratio',
+  td_diff: 'Takedown diff', str_acc_diff: 'Strike accuracy',
+  td_def_diff: 'TD defense', sapm_diff: 'Strikes absorbed',
+  net_grapple_edge: 'Net grapple edge', str_def_diff: 'Strike defense',
+  striker_diff: 'Striker score', ko_rate_diff: 'KO rate',
+  sub_rate_diff: 'Sub rate', absorption_ratio: 'Absorption ratio',
+  grapple_dominance: 'Grapple dominance',
 };
 
-const ease = [0.22, 1, 0.36, 1];
-const fade = { hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0 } };
+function AuthPage({ onAuth }) {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [mode, setMode] = useState('login');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [msg, setMsg] = useState('');
+
+  const handle = async () => {
+    if (!email || !password) { setError('Fill in both fields'); return; }
+    setLoading(true); setError(''); setMsg('');
+    try {
+      if (mode === 'login') {
+        const { data, error: e } = await supabase.auth.signInWithPassword({ email, password });
+        if (e) throw e;
+        onAuth(data.user);
+      } else {
+        const { error: e } = await supabase.auth.signUp({ email, password });
+        if (e) throw e;
+        setMsg('Check your email to confirm your account.');
+      }
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const inp = {
+    padding: '12px 14px', background: '#0d0d0d', border: '1px solid #222',
+    borderRadius: 8, color: '#f0f0ec', fontSize: 13,
+    fontFamily: "'DM Mono', monospace", outline: 'none', width: '100%',
+    transition: 'border-color 0.2s',
+  };
+
+  return (
+    <div style={{
+      minHeight: '100vh', background: '#080808', display: 'flex',
+      alignItems: 'center', justifyContent: 'center',
+      fontFamily: "'DM Mono', monospace", position: 'relative', overflow: 'hidden',
+    }}>
+      <div style={{
+        position: 'absolute', inset: 0,
+        backgroundImage: 'linear-gradient(rgba(232,255,90,0.025) 1px, transparent 1px), linear-gradient(90deg, rgba(232,255,90,0.025) 1px, transparent 1px)',
+        backgroundSize: '40px 40px',
+      }} />
+      <div style={{
+        position: 'absolute', top: '30%', left: '50%', transform: 'translate(-50%,-50%)',
+        width: 500, height: 500,
+        background: 'radial-gradient(circle, rgba(232,255,90,0.05) 0%, transparent 70%)',
+        pointerEvents: 'none',
+      }} />
+      <div style={{ position: 'relative', width: 360 }}>
+        <div style={{ textAlign: 'center', marginBottom: 40 }}>
+          <div style={{
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+            width: 40, height: 40, background: '#e8ff5a', borderRadius: 7,
+            fontSize: 9, fontWeight: 800, color: '#000', marginBottom: 14,
+          }}>UFC</div>
+          <div style={{ fontSize: 11, color: '#2a2a2a', letterSpacing: '0.2em' }}>FIGHT PREDICTOR</div>
+        </div>
+        <div style={{ background: '#0f0f0f', border: '1px solid #1a1a1a', borderRadius: 12, padding: 28 }}>
+          <div style={{ display: 'flex', background: '#080808', borderRadius: 7, padding: 3, marginBottom: 24 }}>
+            {['login', 'signup'].map(m => (
+              <button key={m} onClick={() => { setMode(m); setError(''); setMsg(''); }} style={{
+                flex: 1, padding: '7px 0', border: 'none', borderRadius: 5, cursor: 'pointer',
+                background: mode === m ? '#1a1a1a' : 'transparent',
+                color: mode === m ? '#f0f0ec' : '#2a2a2a',
+                fontSize: 11, fontFamily: "'DM Mono', monospace", letterSpacing: '0.1em',
+                transition: 'all 0.15s',
+              }}>{m.toUpperCase()}</button>
+            ))}
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <input value={email} onChange={e => setEmail(e.target.value)} placeholder="email"
+              type="email" onKeyDown={e => e.key === 'Enter' && handle()} style={inp}
+              onFocus={e => e.target.style.borderColor = '#e8ff5a'}
+              onBlur={e => e.target.style.borderColor = '#222'} />
+            <input value={password} onChange={e => setPassword(e.target.value)} placeholder="password"
+              type="password" onKeyDown={e => e.key === 'Enter' && handle()} style={inp}
+              onFocus={e => e.target.style.borderColor = '#e8ff5a'}
+              onBlur={e => e.target.style.borderColor = '#222'} />
+          </div>
+          {error && <div style={{ color: '#D85A30', fontSize: 11, marginTop: 10 }}>{error}</div>}
+          {msg && <div style={{ color: '#4ade80', fontSize: 11, marginTop: 10 }}>{msg}</div>}
+          <button onClick={handle} disabled={loading} style={{
+            width: '100%', marginTop: 16, padding: '12px 0',
+            background: loading ? '#1a1a1a' : '#e8ff5a',
+            color: loading ? '#333' : '#000', border: 'none', borderRadius: 7,
+            fontSize: 11, fontWeight: 700, fontFamily: "'DM Mono', monospace",
+            cursor: loading ? 'not-allowed' : 'pointer', letterSpacing: '0.1em',
+            transition: 'all 0.2s',
+          }}>{loading ? '...' : mode === 'login' ? 'SIGN IN' : 'CREATE ACCOUNT'}</button>
+        </div>
+        <div style={{ textAlign: 'center', marginTop: 16, fontSize: 10, color: '#1e1e1e' }}>
+          64.2% CV &middot; 10,006 fights &middot; 4,229 fighters
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function FighterInput({ label, color, value, onChange, onSelect }) {
   const [results, setResults] = useState([]);
   const [open, setOpen] = useState(false);
+  const [focused, setFocused] = useState(false);
   const ref = useRef(null);
-
-  useEffect(() => {
-    const handler = (e) => { if (!ref.current?.contains(e.target)) setOpen(false); };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, []);
 
   const search = useCallback(async (q) => {
     onChange(q);
     if (q.length < 2) { setResults([]); setOpen(false); return; }
-    const res = await fetch(`/api/fighters?q=${encodeURIComponent(q)}`);
-    const data = await res.json();
-    setResults(data);
-    setOpen(data.length > 0);
+    try {
+      const r = await fetch(`/api/fighters?q=${encodeURIComponent(q)}`);
+      const data = await r.json();
+      setResults(data);
+      setOpen(data.length > 0);
+    } catch { setOpen(false); }
   }, [onChange]);
 
   const pick = (name) => { onSelect(name); onChange(name); setOpen(false); setResults([]); };
 
+  useEffect(() => {
+    const h = (e) => { if (!ref.current?.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, []);
+
+  const accent = color === 'blue' ? '#378ADD' : '#D85A30';
+
   return (
-    <div ref={ref} style={{ position: 'relative', flex: 1 }}>
-      <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
+    <div ref={ref} style={{ flex: 1, position: 'relative' }}>
+      <div style={{ fontSize: 9, color: '#2a2a2a', letterSpacing: '0.18em', marginBottom: 7, display: 'flex', alignItems: 'center', gap: 8 }}>
         {label}
-        <span style={{ padding: '1px 8px', borderRadius: 20, fontSize: 10, fontWeight: 600, background: color === 'blue' ? 'rgba(55,138,221,0.15)' : 'rgba(216,90,48,0.15)', color: color === 'blue' ? 'var(--blue)' : 'var(--red)' }}>
-          {color === 'blue' ? 'BLUE' : 'RED'}
-        </span>
+        <span style={{
+          padding: '1px 6px', borderRadius: 20, fontSize: 8, fontWeight: 700,
+          background: color === 'blue' ? 'rgba(55,138,221,0.1)' : 'rgba(216,90,48,0.1)',
+          color: accent,
+        }}>{color.toUpperCase()}</span>
       </div>
       <input
         value={value}
         onChange={e => search(e.target.value)}
-        onFocus={() => value.length >= 2 && setOpen(results.length > 0)}
-        placeholder="Type fighter name..."
+        onFocus={() => { setFocused(true); if (value.length >= 2 && results.length) setOpen(true); }}
+        onBlur={() => setFocused(false)}
+        onKeyDown={e => { if (e.key === 'Enter' && results.length) pick(results[0]); }}
+        placeholder="search fighter..."
+        autoComplete="off"
         style={{
-          width: '100%', padding: '12px 16px',
-          background: 'var(--surface2)', border: `1px solid ${open ? (color === 'blue' ? 'var(--blue)' : 'var(--red)') : 'var(--border)'}`,
-          borderRadius: 10, color: 'var(--fg)', fontSize: 14,
-          fontFamily: 'Space Grotesk, sans-serif', outline: 'none',
-          transition: 'border-color 0.2s'
+          width: '100%', padding: '13px 16px',
+          background: '#0a0a0a',
+          border: `1px solid ${focused ? accent : '#1a1a1a'}`,
+          borderRadius: 8, color: '#f0f0ec', fontSize: 14,
+          fontFamily: "'DM Mono', monospace", outline: 'none',
+          transition: 'border-color 0.2s',
         }}
       />
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }}
-            transition={{ duration: 0.15 }}
-            style={{
-              position: 'absolute', top: '100%', left: 0, right: 0, marginTop: 4,
-              background: 'var(--surface2)', border: '1px solid var(--border)',
-              borderRadius: 10, zIndex: 50, overflow: 'hidden'
-            }}
-          >
-            {results.map(name => (
-              <div
-                key={name}
-                onMouseDown={() => pick(name)}
-                style={{
-                  padding: '10px 16px', fontSize: 13, cursor: 'pointer',
-                  borderBottom: '1px solid var(--border)', transition: 'background 0.1s'
-                }}
-                onMouseEnter={e => e.currentTarget.style.background = 'var(--surface)'}
-                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-              >
-                {name}
-              </div>
-            ))}
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {open && (
+        <div style={{
+          position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0,
+          background: '#111', border: '1px solid #1a1a1a', borderRadius: 8,
+          zIndex: 100, overflow: 'hidden', maxHeight: 200, overflowY: 'auto',
+        }}>
+          {results.map(name => (
+            <div key={name} onMouseDown={() => pick(name)}
+              style={{
+                padding: '10px 16px', fontSize: 13, cursor: 'pointer',
+                color: '#f0f0ec', borderBottom: '1px solid #111',
+                fontFamily: "'DM Mono', monospace",
+              }}
+              onMouseEnter={e => e.currentTarget.style.background = '#1a1a1a'}
+              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+            >{name}</div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
 
-function ProbBar({ f1, f2, prob }) {
-  const pct = Math.round(prob * 100);
-  const f1Last = f1.split(' ').slice(-1)[0];
-  const f2Last = f2.split(' ').slice(-1)[0];
-  return (
-    <div style={{ margin: '24px 0' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: 13 }}>
-        <span style={{ color: 'var(--blue)', fontWeight: 600 }}>{f1Last}</span>
-        <span style={{ color: 'var(--muted)', fontSize: 11 }}>win probability</span>
-        <span style={{ color: 'var(--red)', fontWeight: 600 }}>{f2Last}</span>
-      </div>
-      <div style={{ height: 22, background: 'var(--surface2)', borderRadius: 11, overflow: 'hidden', display: 'flex' }}>
-        <motion.div
-          initial={{ width: 0 }} animate={{ width: `${pct}%` }}
-          transition={{ duration: 0.9, ease }}
-          style={{ background: 'var(--blue)', height: '100%' }}
-        />
-        <motion.div
-          initial={{ width: 0 }} animate={{ width: `${100 - pct}%` }}
-          transition={{ duration: 0.9, ease }}
-          style={{ background: 'var(--red)', height: '100%' }}
-        />
-      </div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, fontSize: 13, fontWeight: 600 }}>
-        <span style={{ color: 'var(--blue)' }}>{pct}%</span>
-        <span style={{ color: 'var(--red)' }}>{100 - pct}%</span>
-      </div>
-    </div>
-  );
-}
-
-function ShapBar({ item, f1name, f2name }) {
-  const favorsF1 = item.contrib > 0;
+function ShapBar({ item, f1, f2 }) {
+  const pos = item.contrib > 0;
+  const color = pos ? '#378ADD' : '#D85A30';
+  const name = pos ? f1.split(' ').slice(-1)[0] : f2.split(' ').slice(-1)[0];
+  const pct = Math.min(Math.abs(item.contrib) * 55, 100);
   const label = FEAT_LABELS[item.feature] || item.feature;
-  const favoredName = favorsF1 ? f1name.split(' ').slice(-1)[0] : f2name.split(' ').slice(-1)[0];
-  const barColor = favorsF1 ? 'var(--blue)' : 'var(--red)';
   return (
-    <div style={{ marginBottom: 12 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 4 }}>
-        <span style={{ color: 'var(--fg)' }}>{label}</span>
-        <span style={{ color: 'var(--muted)', fontFamily: 'Fira Code, monospace', fontSize: 11 }}>
-          {item.contrib > 0 ? '+' : ''}{item.contrib.toFixed(3)} &middot; {favoredName}
-        </span>
+    <div style={{ marginBottom: 10 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginBottom: 3, fontFamily: "'DM Mono', monospace" }}>
+        <span style={{ color: '#3a3a3a' }}>{label}</span>
+        <span style={{ color: '#2a2a2a' }}>{item.contrib > 0 ? '+' : ''}{item.contrib.toFixed(3)} &middot; {name}</span>
       </div>
-      <div style={{ height: 6, background: 'var(--surface2)', borderRadius: 3, overflow: 'hidden' }}>
-        <motion.div
-          initial={{ width: 0 }}
-          animate={{ width: `${Math.min(Math.abs(item.contrib) * 80, 100)}%` }}
-          transition={{ duration: 0.7, ease }}
-          style={{ height: '100%', background: barColor, borderRadius: 3 }}
-        />
+      <div style={{ height: 3, background: '#0d0d0d', borderRadius: 2, overflow: 'hidden' }}>
+        <div style={{ width: `${pct}%`, height: '100%', background: color, borderRadius: 2, transition: 'width 0.6s ease' }} />
       </div>
     </div>
   );
 }
 
-function ReliabilityChart({ data }) {
-  const chartData = {
-    labels: data.map(p => `${Math.round(p.predicted * 100)}%`),
-    datasets: [
-      { label: 'Model', data: data.map(p => p.actual), borderColor: '#378ADD', borderWidth: 2, pointRadius: 4, pointBackgroundColor: '#378ADD', tension: 0.2 },
-      { label: 'Perfect', data: data.map(p => p.predicted), borderColor: 'rgba(255,255,255,0.2)', borderWidth: 1, borderDash: [4, 4], pointRadius: 0, tension: 0 }
-    ]
-  };
-  return (
-    <div style={{ height: 180 }}>
-      <Line data={chartData} options={{
-        responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
-        scales: {
-          x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#888', font: { size: 10 } } },
-          y: { min: 0, max: 1, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#888', font: { size: 10 }, callback: v => `${Math.round(v * 100)}%` } }
-        }
-      }} />
-    </div>
-  );
-}
-
-// Heuristic: if one fighter has very high sapm (absorbs a lot) relative to the other,
-// or if the confidence is suspiciously high (>90%) on sparse stats, flag it.
-// More practically: flag when stats look like a weight-class mismatch
-// (one fighter has notably higher td_avg AND str_def suggesting a much bigger fighter).
-function CrossDivisionWarning({ result }) {
-  if (!result || !result.stats) return null;
-  const prob = Math.max(result.f1_win_prob, 1 - result.f1_win_prob);
-  const statsAreZero = result.stats.some(s => s.f1 === 0 && s.f2 === 0);
-  // If prediction is >88% confident AND there are zero stats (data gaps) — likely bad matchup
-  if (prob > 0.88 && statsAreZero) {
-    return (
-      <div style={{
-        background: 'rgba(232,180,50,0.08)', border: '1px solid rgba(232,180,50,0.3)',
-        borderRadius: 10, padding: '12px 16px', marginBottom: 16,
-        display: 'flex', gap: 10, alignItems: 'flex-start'
-      }}>
-        <span style={{ fontSize: 16, flexShrink: 0 }}>&#9888;</span>
-        <p style={{ fontSize: 12, color: 'rgba(232,180,50,0.9)', lineHeight: 1.6, margin: 0 }}>
-          <strong>Cross-division matchup detected.</strong> This prediction is based purely on recorded UFC stats — it does not account for weight class, size, or reach differences. Results for hypothetical matchups across weight classes should be treated as entertainment only.
-        </p>
-      </div>
-    );
-  }
-  return null;
-}
-
-export default function App() {
+function Predictor({ user }) {
   const [f1, setF1] = useState('');
   const [f2, setF2] = useState('');
-  const [f1val, setF1val] = useState('');
-  const [f2val, setF2val] = useState('');
+  const [f1sel, setF1sel] = useState('');
+  const [f2sel, setF2sel] = useState('');
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   const predict = async () => {
-    if (!f1 || !f2) { setError('Select both fighters'); return; }
-    if (f1 === f2) { setError('Select two different fighters'); return; }
+    const name1 = f1sel || f1.trim();
+    const name2 = f2sel || f2.trim();
+    if (!name1 || !name2) { setError('Select both fighters'); return; }
+    if (name1 === name2) { setError('Select two different fighters'); return; }
     setError(''); setLoading(true); setResult(null);
     try {
-      const res = await fetch('/api/predict', {
+      const r = await fetch('/api/predict', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ f1, f2 })
+        body: JSON.stringify({ f1: name1, f2: name2 }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
-      setResult(data);
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error);
+      setResult(d);
     } catch (e) { setError(e.message); }
     finally { setLoading(false); }
   };
 
-  const container = { hidden: {}, show: { transition: { staggerChildren: 0.08 } } };
+  const pct1 = result ? Math.round(result.f1_win_prob * 100) : 50;
+  const pct2 = 100 - pct1;
+  const winnerIsF1 = result?.predicted_winner === result?.f1_name;
+  const conf = result?.confidence;
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
+    <div style={{ minHeight: '100vh', background: '#080808', fontFamily: "'DM Mono', monospace", display: 'flex', flexDirection: 'column' }}>
       <nav style={{
-        padding: '20px 40px', display: 'flex', alignItems: 'center',
-        borderBottom: '1px solid var(--border)'
+        padding: '14px 32px', display: 'flex', alignItems: 'center',
+        justifyContent: 'space-between', borderBottom: '1px solid #0f0f0f',
+        background: 'rgba(8,8,8,0.98)', position: 'sticky', top: 0, zIndex: 50,
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{
-            width: 28, height: 28, background: 'var(--accent)', borderRadius: 6,
-            display: 'flex', alignItems: 'center', justifyContent: 'center'
-          }}>
-            <span style={{ fontSize: 11, color: '#000', fontWeight: 800, letterSpacing: '-0.5px' }}>UFC</span>
-          </div>
-          <span style={{ fontWeight: 600, fontSize: 15, letterSpacing: '-0.01em' }}>UFC Predictor</span>
+            width: 24, height: 24, background: '#e8ff5a', borderRadius: 5,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 7, fontWeight: 800, color: '#000',
+          }}>UFC</div>
+          <span style={{ fontSize: 11, color: '#222', letterSpacing: '0.12em' }}>FIGHT PREDICTOR</span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+          <span style={{ fontSize: 10, color: '#1e1e1e' }}>{user?.email}</span>
+          <button onClick={() => supabase.auth.signOut()} style={{
+            background: 'none', border: '1px solid #1a1a1a', borderRadius: 5,
+            color: '#2a2a2a', fontSize: 10, padding: '4px 10px', cursor: 'pointer',
+            fontFamily: "'DM Mono', monospace", letterSpacing: '0.08em',
+          }}>SIGN OUT</button>
         </div>
       </nav>
 
-      <main style={{ maxWidth: 760, margin: '0 auto', padding: '60px 24px' }}>
-        <motion.div initial="hidden" animate="show" variants={container}>
-          <motion.div variants={fade} transition={{ duration: 0.7, ease }}>
-            <p style={{ color: 'var(--accent)', fontSize: 11, letterSpacing: '0.15em', marginBottom: 12 }}>ML-POWERED &middot; XGBOOST &middot; 68.4% CV ACCURACY</p>
-            <h1 style={{ fontSize: 'clamp(2.4rem, 6vw, 4rem)', lineHeight: 1.05, fontWeight: 700, marginBottom: 16, letterSpacing: '-0.02em' }}>
-              Who wins<br />the fight?
-            </h1>
-            <p style={{ color: 'var(--muted)', fontSize: 15, maxWidth: 420, marginBottom: 48, lineHeight: 1.7 }}>
-              Search any UFC fighter. The model analyzes striking, grappling, and defense differentials trained on 11,280 fights.
-            </p>
-          </motion.div>
+      <div style={{ flex: 1, maxWidth: 860, margin: '0 auto', width: '100%', padding: '40px 24px' }}>
+        <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end', marginBottom: 12 }}>
+          <FighterInput label="FIGHTER 1" color="blue" value={f1}
+            onChange={v => { setF1(v); setF1sel(''); }} onSelect={v => { setF1sel(v); setF1(v); }} />
+          <div style={{ paddingBottom: 13, color: '#1e1e1e', fontSize: 11, fontWeight: 700, flexShrink: 0 }}>VS</div>
+          <FighterInput label="FIGHTER 2" color="red" value={f2}
+            onChange={v => { setF2(v); setF2sel(''); }} onSelect={v => { setF2sel(v); setF2(v); }} />
+        </div>
 
-          <motion.div variants={fade} transition={{ duration: 0.7, ease, delay: 0.1 }}
-            style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, padding: 28, marginBottom: 20 }}
-          >
-            <div style={{ display: 'flex', gap: 16, marginBottom: 20, flexWrap: 'wrap' }}>
-              <FighterInput label="Fighter 1" color="blue" value={f1val} onChange={v => { setF1val(v); }} onSelect={v => setF1(v)} />
-              <div style={{ display: 'flex', alignItems: 'flex-end', paddingBottom: 12 }}>
-                <span style={{ color: 'var(--muted)', fontSize: 13, fontWeight: 600 }}>VS</span>
+        {error && <div style={{ color: '#D85A30', fontSize: 11, marginBottom: 10 }}>{error}</div>}
+
+        <button onClick={predict} disabled={loading} style={{
+          width: '100%', padding: '13px', marginBottom: 32,
+          background: loading ? '#0f0f0f' : '#e8ff5a',
+          color: loading ? '#222' : '#000', border: 'none', borderRadius: 7,
+          fontSize: 11, fontWeight: 700, fontFamily: "'DM Mono', monospace",
+          cursor: loading ? 'not-allowed' : 'pointer', letterSpacing: '0.12em',
+          transition: 'all 0.2s',
+        }}>{loading ? 'ANALYZING...' : 'PREDICT WINNER →'}</button>
+
+        {result && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+            {/* Winner */}
+            <div style={{ background: '#0c0c0c', border: '1px solid #161616', borderRadius: 10, padding: '24px 24px 20px' }}>
+              <div style={{ fontSize: 9, color: '#2a2a2a', letterSpacing: '0.2em', marginBottom: 10 }}>PREDICTED WINNER</div>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
+                <span style={{
+                  fontSize: 'clamp(1.8rem,4vw,3rem)', fontWeight: 700, letterSpacing: '-0.02em',
+                  color: winnerIsF1 ? '#378ADD' : '#D85A30',
+                }}>{result.predicted_winner}</span>
+                <span style={{
+                  fontSize: 9, letterSpacing: '0.12em', padding: '3px 9px', borderRadius: 20,
+                  background: conf === 'high' ? 'rgba(74,222,128,0.06)' : conf === 'medium' ? 'rgba(232,255,90,0.06)' : 'rgba(255,255,255,0.03)',
+                  color: conf === 'high' ? '#4ade80' : conf === 'medium' ? '#e8ff5a' : '#2a2a2a',
+                  border: `1px solid ${conf === 'high' ? 'rgba(74,222,128,0.15)' : conf === 'medium' ? 'rgba(232,255,90,0.15)' : '#1a1a1a'}`,
+                }}>{conf?.toUpperCase()} CONFIDENCE</span>
               </div>
-              <FighterInput label="Fighter 2" color="red" value={f2val} onChange={v => { setF2val(v); }} onSelect={v => setF2(v)} />
+              <div style={{ fontSize: 10, display: 'flex', justifyContent: 'space-between', marginBottom: 5, color: '#1e1e1e' }}>
+                <span style={{ color: '#378ADD' }}>{result.f1_name.split(' ').slice(-1)[0]}</span>
+                <span>win probability</span>
+                <span style={{ color: '#D85A30' }}>{result.f2_name.split(' ').slice(-1)[0]}</span>
+              </div>
+              <div style={{ height: 5, background: '#080808', borderRadius: 3, overflow: 'hidden', display: 'flex' }}>
+                <div style={{ width: `${pct1}%`, background: '#378ADD', transition: 'width 0.9s cubic-bezier(0.22,1,0.36,1)' }} />
+                <div style={{ width: `${pct2}%`, background: '#D85A30', transition: 'width 0.9s cubic-bezier(0.22,1,0.36,1)' }} />
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 5, fontSize: 11, fontWeight: 700 }}>
+                <span style={{ color: '#378ADD' }}>{pct1}%</span>
+                <span style={{ color: '#D85A30' }}>{pct2}%</span>
+              </div>
             </div>
-            {error && <p style={{ color: 'var(--red)', fontSize: 13, marginBottom: 16 }}>{error}</p>}
-            <button
-              onClick={predict} disabled={loading}
-              style={{
-                width: '100%', padding: '14px 24px',
-                background: loading ? 'var(--surface2)' : 'var(--accent)',
-                color: loading ? 'var(--muted)' : '#000',
-                border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 700,
-                fontFamily: 'Space Grotesk, sans-serif', cursor: loading ? 'not-allowed' : 'pointer',
-                transition: 'all 0.2s', letterSpacing: '0.01em'
-              }}
-            >
-              {loading ? 'Analyzing...' : 'Predict winner \u2192'}
-            </button>
-          </motion.div>
-        </motion.div>
 
-        <AnimatePresence>
-          {result && (
-            <motion.div
-              key="result"
-              initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-              transition={{ duration: 0.6, ease }}
-            >
-              <CrossDivisionWarning result={result} />
-
-              <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, padding: 28, marginBottom: 16 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
-                  <div>
-                    <p style={{ fontSize: 11, color: 'var(--muted)', letterSpacing: '0.1em', marginBottom: 4 }}>PREDICTED WINNER</p>
-                    <h2 style={{ fontSize: 'clamp(1.6rem, 4vw, 2.4rem)', fontWeight: 700, letterSpacing: '-0.02em', color: result.predicted_winner === result.f1_name ? 'var(--blue)' : 'var(--red)' }}>
-                      {result.predicted_winner}
-                    </h2>
-                  </div>
-                  <span style={{
-                    padding: '6px 14px', borderRadius: 20, fontSize: 11, fontWeight: 600,
-                    background: result.confidence === 'high' ? 'rgba(74,222,128,0.12)' : result.confidence === 'medium' ? 'rgba(232,255,90,0.1)' : 'rgba(255,255,255,0.06)',
-                    color: result.confidence === 'high' ? 'var(--green)' : result.confidence === 'medium' ? 'var(--accent)' : 'var(--muted)',
-                    border: `1px solid currentColor`
-                  }}>
-                    {result.confidence.toUpperCase()} CONFIDENCE
-                  </span>
-                </div>
-                <ProbBar f1={result.f1_name} f2={result.f2_name} prob={result.f1_win_prob} />
-              </div>
-
+            {/* SHAP + Stats */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1, marginTop: 1 }}>
               {result.shap_breakdown?.length > 0 && (
-                <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, padding: 28, marginBottom: 16 }}>
-                  <p style={{ fontSize: 11, color: 'var(--muted)', letterSpacing: '0.1em', marginBottom: 20 }}>SHAP FEATURE BREAKDOWN</p>
-                  {result.shap_breakdown.map(item => <ShapBar key={item.feature} item={item} f1name={result.f1_name} f2name={result.f2_name} />)}
-                  <div style={{ display: 'flex', gap: 16, marginTop: 16, fontSize: 11, color: 'var(--muted)' }}>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><span style={{ width: 10, height: 10, borderRadius: 2, background: 'var(--blue)', display: 'inline-block' }} />Favors {result.f1_name.split(' ').slice(-1)[0]} (F1 &middot; blue)</span>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><span style={{ width: 10, height: 10, borderRadius: 2, background: 'var(--red)', display: 'inline-block' }} />Favors {result.f2_name.split(' ').slice(-1)[0]} (F2 &middot; red)</span>
+                <div style={{ background: '#0c0c0c', border: '1px solid #161616', borderRadius: 10, padding: 22 }}>
+                  <div style={{ fontSize: 9, color: '#2a2a2a', letterSpacing: '0.2em', marginBottom: 14 }}>SHAP BREAKDOWN</div>
+                  {result.shap_breakdown.slice(0, 6).map(item => (
+                    <ShapBar key={item.feature} item={item} f1={result.f1_name} f2={result.f2_name} />
+                  ))}
+                  <div style={{ display: 'flex', gap: 14, marginTop: 12, fontSize: 9, color: '#1e1e1e' }}>
+                    <span>&#9632; <span style={{ color: '#378ADD' }}>{result.f1_name.split(' ').slice(-1)[0]}</span></span>
+                    <span>&#9632; <span style={{ color: '#D85A30' }}>{result.f2_name.split(' ').slice(-1)[0]}</span></span>
                   </div>
                 </div>
               )}
-
               {result.stats?.length > 0 && (
-                <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, padding: 28, marginBottom: 16 }}>
-                  <p style={{ fontSize: 11, color: 'var(--muted)', letterSpacing: '0.1em', marginBottom: 20 }}>STAT COMPARISON</p>
+                <div style={{ background: '#0c0c0c', border: '1px solid #161616', borderRadius: 10, padding: 22 }}>
+                  <div style={{ fontSize: 9, color: '#2a2a2a', letterSpacing: '0.2em', marginBottom: 14 }}>STAT COMPARISON</div>
                   {result.stats.map(s => {
                     const total = (s.f1 + s.f2) || 1;
                     const p1 = Math.round(s.f1 / total * 100);
                     return (
-                      <div key={s.label} style={{ marginBottom: 16 }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 5 }}>
-                          <span style={{ fontWeight: 600, color: 'var(--blue)', fontFamily: 'Fira Code, monospace' }}>{s.f1}{s.unit}</span>
-                          <span style={{ color: 'var(--muted)' }}>{s.label}</span>
-                          <span style={{ fontWeight: 600, color: 'var(--red)', fontFamily: 'Fira Code, monospace' }}>{s.f2}{s.unit}</span>
+                      <div key={s.label} style={{ marginBottom: 12 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginBottom: 4 }}>
+                          <span style={{ color: '#378ADD' }}>{s.f1}{s.unit}</span>
+                          <span style={{ color: '#222' }}>{s.label}</span>
+                          <span style={{ color: '#D85A30' }}>{s.f2}{s.unit}</span>
                         </div>
-                        <div style={{ height: 6, background: 'var(--surface2)', borderRadius: 3, overflow: 'hidden', display: 'flex' }}>
-                          <motion.div initial={{ width: 0 }} animate={{ width: `${p1}%` }} transition={{ duration: 0.8, ease }} style={{ background: 'var(--blue)' }} />
-                          <motion.div initial={{ width: 0 }} animate={{ width: `${100 - p1}%` }} transition={{ duration: 0.8, ease }} style={{ background: 'var(--red)' }} />
+                        <div style={{ height: 3, background: '#080808', borderRadius: 2, overflow: 'hidden', display: 'flex' }}>
+                          <div style={{ width: `${p1}%`, background: '#378ADD' }} />
+                          <div style={{ width: `${100-p1}%`, background: '#D85A30' }} />
                         </div>
                       </div>
                     );
                   })}
                 </div>
               )}
+            </div>
+            <div style={{ textAlign: 'center', paddingTop: 20, fontSize: 9, color: '#151515' }}>
+              64.2% CV &middot; 10,006 fights &middot; ufcstats.com via Kaggle 2015–2025
+            </div>
+          </div>
+        )}
 
-              {result.reliability && (
-                <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, padding: 28 }}>
-                  <p style={{ fontSize: 11, color: 'var(--muted)', letterSpacing: '0.1em', marginBottom: 20 }}>MODEL RELIABILITY CURVE</p>
-                  <ReliabilityChart data={result.reliability} />
-                  <p style={{ fontSize: 11, color: 'var(--muted)', marginTop: 12 }}>Model closely tracks perfect calibration &#8212; probabilities are trustworthy.</p>
-                </div>
-              )}
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </main>
+        {!result && !loading && (
+          <div style={{ textAlign: 'center', padding: '80px 0', fontSize: 10, color: '#151515', letterSpacing: '0.2em' }}>
+            TYPE TWO NAMES · HIT PREDICT
+          </div>
+        )}
+      </div>
     </div>
   );
+}
+
+export default function App() {
+  const [user, setUser] = useState(null);
+  const [checking, setChecking] = useState(true);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+      setChecking(false);
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
+      setUser(session?.user ?? null);
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
+  if (checking) return (
+    <div style={{ minHeight: '100vh', background: '#080808', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 10, color: '#1a1a1a', letterSpacing: '0.2em' }}>...</div>
+    </div>
+  );
+
+  return user ? <Predictor user={user} /> : <AuthPage onAuth={setUser} />;
 }
