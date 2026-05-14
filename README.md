@@ -85,6 +85,20 @@ The model had Strickland beating Chimaev 27% — Chimaev was the real 80% favori
 
 ---
 
+## Data leakage
+
+Three checks were run.
+
+**Temporal leakage (random split vs time split):** Training on random 80%, testing on random 20% gives 64.3%. Training on the first 80% of fights by date, testing on the last 20% gives 61.5%. That 2.8% drop is normal — recent fighters have more fights and more stable stats, so older fights are genuinely harder to predict. Nothing alarming.
+
+**Career average contamination:** This one is real and unfixable with public data. The Kaggle fighter stats are career averages computed at scrape time (2024), which means a 2015 fight uses stats that include nine years of future fights. Every UFC ML paper using ufcstats career averages has this problem — it's baked into the data source. The fix is per-fight rolling averages, where each fighter's stats are computed using only fights before the date being predicted. No public Kaggle dataset does this. The inflation is probably 2-3%.
+
+**Mirror pair leakage:** Each fight appears twice in the dataset — once with Fighter A as F1 (label 1) and once with Fighter B as F1 (label 0). With a random train/test split, 31.8% of fight pairs end up with one mirror in training and the other in test. After fixing this with group-aware cross-validation (both mirrors from the same fight go to the same split), accuracy drops from 64.3% to 63.8%. So mirror leakage inflates the reported number by 0.5% — negligible.
+
+**Honest number after all checks: ~62-63%.** The career average contamination is the real issue. It's not fixable without rebuilding the data pipeline from scratch with per-fight rolling stats.
+
+---
+
 ## Stack
 
 | Layer | Tech |
