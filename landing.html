@@ -27,7 +27,7 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;padding:18px 48px;display:fl
 h1{font-size:clamp(2.8rem,4.5vw,5.2rem);line-height:1.02;font-weight:700;letter-spacing:-0.03em;margin-bottom:20px}
 h1 em{font-style:normal;color:var(--accent)}
 .hero-desc{font-size:16px;color:var(--muted);max-width:400px;line-height:1.75;margin-bottom:40px}
-.hero-stats{display:flex;gap:36px;padding-top:36px;border-top:1px solid var(--border)}
+.hero-stats{display:flex;gap:36px;padding-top:36px;border-top:1px solid var(--border);flex-wrap:wrap}
 .stat-val{font-size:2rem;font-weight:700;letter-spacing:-0.03em}
 .stat-val em{font-style:normal;color:var(--accent)}
 .stat-lbl{font-size:11px;color:var(--muted);letter-spacing:0.05em;margin-top:2px}
@@ -107,17 +107,13 @@ h1 em{font-style:normal;color:var(--accent)}
 .sc-bar-bg{height:7px;background:var(--surface2);border-radius:4px;overflow:hidden}
 .sc-bar-fill{height:100%;border-radius:4px}
 .sc-num{font-size:10px;font-family:'Fira Code',monospace;color:var(--accent)}
-.matchups-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
-.matchup{background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:18px}
-.matchup-fighters{display:flex;align-items:center;gap:10px;margin-bottom:12px}
-.mf{font-size:13px;font-weight:600}
-.mf.blue{color:var(--blue)}.mf.red{color:var(--red)}
-.mvs{font-size:10px;color:var(--muted);font-weight:600}
-.mbar{height:5px;border-radius:3px;overflow:hidden;background:var(--surface2);display:flex;margin-bottom:8px}
-.mbar-f1{background:var(--blue)}.mbar-f2{background:var(--red)}
-.mpcts{display:flex;justify-content:space-between;font-size:11px;font-weight:600;font-family:'Fira Code',monospace}
-.moutcome{font-size:11px;color:var(--muted);margin-top:6px}
-.mcheck{color:var(--green)}
+.val-table{width:100%;border-collapse:collapse;font-size:13px}
+.val-table th{font-size:10px;letter-spacing:0.1em;color:var(--muted);text-align:left;padding:0 12px 12px 0;font-weight:500}
+.val-table td{padding:10px 12px 10px 0;border-top:1px solid var(--border);color:var(--fg);vertical-align:top}
+.val-table tr:last-child td{border-bottom:1px solid var(--border)}
+.val-correct{color:var(--green);font-size:12px}
+.val-miss{color:var(--red);font-size:12px}
+.val-prob{font-family:'Fira Code',monospace;font-size:12px;color:var(--accent)}
 footer{background:var(--surface);border-top:1px solid var(--border);padding:32px 48px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px}
 .footer-sub{font-size:12px;color:var(--muted);margin-top:4px}
 .footer-links{display:flex;gap:20px;font-size:12px;color:var(--muted)}
@@ -128,7 +124,7 @@ footer{background:var(--surface);border-top:1px solid var(--border);padding:32px
   .hero-left{padding:80px 20px 40px}
   .hero-right{padding:32px 20px;border-left:none;border-top:1px solid var(--border)}
   .strip{padding:48px 20px}
-  .two-col,.matchups-grid{grid-template-columns:1fr}
+  .two-col{grid-template-columns:1fr}
   footer{padding:24px 20px;flex-direction:column;align-items:flex-start}
 }
 </style>
@@ -143,14 +139,14 @@ footer{background:var(--surface);border-top:1px solid var(--border);padding:32px
 <section class="hero" id="predict">
   <div class="hero-left">
     <div class="hero-grid"></div>
-    <div class="eyebrow">ML-POWERED &middot; XGBOOST &middot; 63.7% CV ACCURACY</div>
+    <div class="eyebrow">XGBOOST &middot; 19 FEATURES &middot; 2015&ndash;2025 DATA</div>
     <h1>Who wins<br>the <em>fight?</em></h1>
-    <p class="hero-desc">Search any of 3,333 UFC fighters. The model computes 12 differentials across striking, grappling, and defense &mdash; and outputs calibrated win probabilities with SHAP explanations.</p>
+    <p class="hero-desc">Search any of 4,229 UFC fighters. The model computes striking, grappling, defense, and style differentials &mdash; then outputs calibrated win probabilities with SHAP explanations for every prediction.</p>
     <div class="hero-stats">
-      <div><div class="stat-val"><em>63.7</em>%</div><div class="stat-lbl">CV ACCURACY</div></div>
-      <div><div class="stat-val">2<em>,</em>925</div><div class="stat-lbl">FIGHTS TRAINED</div></div>
-      <div><div class="stat-val">3<em>,</em>333</div><div class="stat-lbl">FIGHTERS IN DB</div></div>
-      <div><div class="stat-val">+<em>12</em>%</div><div class="stat-lbl">OVER BASELINE</div></div>
+      <div><div class="stat-val"><em>64.2</em>%</div><div class="stat-lbl">CV ACCURACY</div></div>
+      <div><div class="stat-val">10<em>k</em></div><div class="stat-lbl">FIGHTS TRAINED</div></div>
+      <div><div class="stat-val">4<em>,</em>229</div><div class="stat-lbl">FIGHTERS IN DB</div></div>
+      <div><div class="stat-val">+<em>10</em>%</div><div class="stat-lbl">OVER BASELINE</div></div>
     </div>
   </div>
   <div class="hero-right">
@@ -177,26 +173,26 @@ footer{background:var(--surface);border-top:1px solid var(--border);padding:32px
     <div class="two-col">
       <div>
         <div class="strip-title">How it works</div>
-        <div class="strip-sub">From raw ufcstats.com career averages to a calibrated prediction in under 2 seconds.</div>
+        <div class="strip-sub">Career averages from ufcstats.com, fight results from 2015 to December 2025, style membership scores from ML clustering. 19 features total.</div>
         <div class="method-steps">
-          <div class="method-step"><div class="step-num">01</div><div><div class="step-title">Feature engineering</div><div class="step-desc">12 differentials from career averages &mdash; striking output, accuracy, absorption, defense, takedown stats, submission rate, and composite edges.</div></div></div>
-          <div class="method-step"><div class="step-num">02</div><div><div class="step-title">XGBoost + Optuna</div><div class="step-desc">Gradient-boosted trees tuned via 50-trial Bayesian optimization. Each fight appears twice &mdash; once per fighter as F1 &mdash; symmetric balanced dataset.</div></div></div>
-          <div class="method-step"><div class="step-num">03</div><div><div class="step-title">SHAP analysis</div><div class="step-desc">TreeExplainer computes per-feature Shapley values. Net strike edge dominates &mdash; 2x the importance of the next feature.</div></div></div>
-          <div class="method-step"><div class="step-num">04</div><div><div class="step-title">JS surrogate</div><div class="step-desc">Logistic regression fit on XGBoost predictions achieves 89.3% agreement &mdash; real-time predictions with no backend lag.</div></div></div>
+          <div class="method-step"><div class="step-num">01</div><div><div class="step-title">Feature engineering</div><div class="step-desc">Net strike edge (slpm &times; accuracy &minus; sapm &times; absorption), grapple dominance, style clash score, fighter style membership (striker/wrestler probability), KO/submission rates, weight class.</div></div></div>
+          <div class="method-step"><div class="step-num">02</div><div><div class="step-title">XGBoost + Optuna</div><div class="step-desc">50-trial Bayesian tuning. Each fight appears twice &mdash; once per fighter as F1 &mdash; balanced 50/50 dataset. Only fights where both fighters have full stats included.</div></div></div>
+          <div class="method-step"><div class="step-num">03</div><div><div class="step-title">Why 70% is hard</div><div class="step-desc">Papers claiming 70%+ either use in-fight stats (leakage), betting odds as a feature, or small handpicked test sets. With career averages only, 64% is close to the statistical ceiling &mdash; a 2019 paper by Bunker &amp; Thabtah hit the same number.</div></div></div>
+          <div class="method-step"><div class="step-num">04</div><div><div class="step-title">JS surrogate</div><div class="step-desc">Logistic regression fit on XGBoost's own predictions achieves 90.5% agreement. Predictions run in the browser with no backend round-trip.</div></div></div>
         </div>
       </div>
       <div>
         <div class="shap-chart-card">
           <div class="shap-chart-label">GLOBAL SHAP IMPORTANCE</div>
           <div class="shap-chart-rows">
-            <div class="shap-chart-row"><div class="sc-label">Net strike edge</div><div class="sc-bar-bg"><div class="sc-bar-fill" style="width:100%;background:var(--accent)"></div></div><div class="sc-num">0.4244</div></div>
-            <div class="shap-chart-row"><div class="sc-label">Sub. threat</div><div class="sc-bar-bg"><div class="sc-bar-fill" style="width:43%;background:var(--blue)"></div></div><div class="sc-num">0.1822</div></div>
-            <div class="shap-chart-row"><div class="sc-label">Strike output</div><div class="sc-bar-bg"><div class="sc-bar-fill" style="width:42%;background:var(--blue)"></div></div><div class="sc-num">0.1771</div></div>
-            <div class="shap-chart-row"><div class="sc-label">Defense ratio</div><div class="sc-bar-bg"><div class="sc-bar-fill" style="width:34%;background:var(--blue)"></div></div><div class="sc-num">0.1464</div></div>
-            <div class="shap-chart-row"><div class="sc-label">Takedown diff</div><div class="sc-bar-bg"><div class="sc-bar-fill" style="width:34%;background:var(--blue)"></div></div><div class="sc-num">0.1456</div></div>
-            <div class="shap-chart-row"><div class="sc-label">Strike accuracy</div><div class="sc-bar-bg"><div class="sc-bar-fill" style="width:27%;background:var(--blue)"></div></div><div class="sc-num">0.1128</div></div>
-            <div class="shap-chart-row"><div class="sc-label">TD defense</div><div class="sc-bar-bg"><div class="sc-bar-fill" style="width:13%;background:var(--blue)"></div></div><div class="sc-num">0.0544</div></div>
-            <div class="shap-chart-row"><div class="sc-label">Strikes absorbed</div><div class="sc-bar-bg"><div class="sc-bar-fill" style="width:12%;background:var(--blue)"></div></div><div class="sc-num">0.0519</div></div>
+            <div class="shap-chart-row"><div class="sc-label">Net strike edge</div><div class="sc-bar-bg"><div class="sc-bar-fill" style="width:100%;background:var(--accent)"></div></div><div class="sc-num">0.4159</div></div>
+            <div class="shap-chart-row"><div class="sc-label">Striker score diff</div><div class="sc-bar-bg"><div class="sc-bar-fill" style="width:52%;background:var(--blue)"></div></div><div class="sc-num">0.2180</div></div>
+            <div class="shap-chart-row"><div class="sc-label">Submission diff</div><div class="sc-bar-bg"><div class="sc-bar-fill" style="width:35%;background:var(--blue)"></div></div><div class="sc-num">0.1458</div></div>
+            <div class="shap-chart-row"><div class="sc-label">Strike accuracy</div><div class="sc-bar-bg"><div class="sc-bar-fill" style="width:29%;background:var(--blue)"></div></div><div class="sc-num">0.1202</div></div>
+            <div class="shap-chart-row"><div class="sc-label">Takedown diff</div><div class="sc-bar-bg"><div class="sc-bar-fill" style="width:28%;background:var(--blue)"></div></div><div class="sc-num">0.1183</div></div>
+            <div class="shap-chart-row"><div class="sc-label">Strike output</div><div class="sc-bar-bg"><div class="sc-bar-fill" style="width:23%;background:var(--blue)"></div></div><div class="sc-num">0.0946</div></div>
+            <div class="shap-chart-row"><div class="sc-label">Defense ratio</div><div class="sc-bar-bg"><div class="sc-bar-fill" style="width:22%;background:var(--blue)"></div></div><div class="sc-num">0.0910</div></div>
+            <div class="shap-chart-row"><div class="sc-label">Strikes absorbed</div><div class="sc-bar-bg"><div class="sc-bar-fill" style="width:18%;background:var(--blue)"></div></div><div class="sc-num">0.0758</div></div>
           </div>
         </div>
       </div>
@@ -204,30 +200,37 @@ footer{background:var(--surface);border-top:1px solid var(--border);padding:32px
   </div>
 </section>
 
-<section class="strip" id="validation">
+<section class="strip" id="validation" style="background:var(--surface)">
   <div class="strip-inner">
     <div class="strip-label">VALIDATION</div>
-    <div class="strip-title">Hypothesis tests</div>
-    <div class="strip-sub">Real fights the model called correctly against consensus expectation.</div>
-    <div class="matchups-grid">
-      <div class="matchup"><div class="matchup-fighters"><span class="mf blue">Khabib</span><span class="mvs">vs</span><span class="mf red">McGregor</span></div><div class="mbar"><div class="mbar-f1" style="width:74.6%"></div><div class="mbar-f2" style="width:25.4%"></div></div><div class="mpcts"><span style="color:var(--blue)">74.6%</span><span style="color:var(--red)">25.4%</span></div><div class="moutcome"><span class="mcheck">&#10003;</span> Khabib won by submission R4</div></div>
-      <div class="matchup"><div class="matchup-fighters"><span class="mf blue">Strickland</span><span class="mvs">vs</span><span class="mf red">Adesanya</span></div><div class="mbar"><div class="mbar-f1" style="width:69.5%"></div><div class="mbar-f2" style="width:30.5%"></div></div><div class="mpcts"><span style="color:var(--blue)">69.5%</span><span style="color:var(--red)">30.5%</span></div><div class="moutcome"><span class="mcheck">&#10003;</span> Strickland upset &mdash; unanimous decision</div></div>
-      <div class="matchup"><div class="matchup-fighters"><span class="mf blue">Poirier</span><span class="mvs">vs</span><span class="mf red">McGregor 3</span></div><div class="mbar"><div class="mbar-f1" style="width:66.7%"></div><div class="mbar-f2" style="width:33.3%"></div></div><div class="mpcts"><span style="color:var(--blue)">66.7%</span><span style="color:var(--red)">33.3%</span></div><div class="moutcome"><span class="mcheck">&#10003;</span> Poirier won by TKO R1</div></div>
-      <div class="matchup"><div class="matchup-fighters"><span class="mf blue">Jones</span><span class="mvs">vs</span><span class="mf red">Pereira</span></div><div class="mbar"><div class="mbar-f1" style="width:59.6%"></div><div class="mbar-f2" style="width:40.4%"></div></div><div class="mpcts"><span style="color:var(--blue)">59.6%</span><span style="color:var(--red)">40.4%</span></div><div class="moutcome"><span class="mcheck">&#10003;</span> Jones favored &mdash; correct direction</div></div>
-    </div>
+    <div class="strip-title">Real fights, real results</div>
+    <div class="strip-sub">How the model called fights against actual outcomes and betting odds.</div>
+    <table class="val-table">
+      <thead><tr><th>Fight</th><th>Model</th><th>Odds</th><th>Result</th><th></th></tr></thead>
+      <tbody>
+        <tr><td>Makhachev vs Volkanovski I</td><td class="val-prob">Makhachev 56%</td><td style="color:var(--muted);font-size:12px">Makhachev ~60% fav</td><td style="font-size:12px">Makhachev UD</td><td class="val-correct">&#10003;</td></tr>
+        <tr><td>Makhachev vs Volkanovski II</td><td class="val-prob">Makhachev 56%</td><td style="color:var(--muted);font-size:12px">Makhachev fav</td><td style="font-size:12px">Makhachev TKO R1</td><td class="val-correct">&#10003;</td></tr>
+        <tr><td>Khabib vs McGregor</td><td class="val-prob">Khabib 81%</td><td style="color:var(--muted);font-size:12px">Khabib -180</td><td style="font-size:12px">Khabib sub R4</td><td class="val-correct">&#10003;</td></tr>
+        <tr><td>Strickland vs Adesanya</td><td class="val-prob">Strickland 59%</td><td style="color:var(--muted);font-size:12px">Adesanya -300</td><td style="font-size:12px">Strickland UD (upset)</td><td class="val-correct">&#10003;</td></tr>
+        <tr><td>Poirier vs McGregor 3</td><td class="val-prob">Poirier 67%</td><td style="color:var(--muted);font-size:12px">Poirier fav</td><td style="font-size:12px">Poirier TKO R1</td><td class="val-correct">&#10003;</td></tr>
+        <tr><td>Jones vs Pereira</td><td class="val-prob">Jones 59%</td><td style="color:var(--muted);font-size:12px">Jones fav</td><td style="font-size:12px">Jones favored</td><td class="val-correct">&#10003;</td></tr>
+        <tr><td>Strickland vs Chimaev (UFC 328)</td><td class="val-prob">Chimaev 73%</td><td style="color:var(--muted);font-size:12px">Chimaev -400</td><td style="font-size:12px">Strickland split dec</td><td class="val-miss">&#10005;</td></tr>
+      </tbody>
+    </table>
+    <p style="font-size:12px;color:var(--muted);margin-top:16px">The Chimaev miss was a genuine 4-to-1 underdog upset. Vegas had it wrong too. Career averages can't capture an off night.</p>
   </div>
 </section>
 
 <footer>
   <div>
     <div class="logo"><div class="logo-mark">UFC</div><span style="font-weight:600;font-size:14px">UFC Predictor</span></div>
-    <div class="footer-sub">XGBoost &middot; Optuna &middot; SHAP &middot; Express &middot; Railway &middot; Data: ufcstats.com via Kaggle (2015&ndash;2021)</div>
+    <div class="footer-sub">XGBoost &middot; Optuna &middot; SHAP &middot; Express &middot; Railway &middot; Data: ufcstats.com via Kaggle (2015&ndash;2025)</div>
   </div>
   <div class="footer-links"><a href="https://github.com/kabirmago/ufc-predictor">GitHub &rarr;</a><a href="https://www.kaggle.com/datasets/asaniczka/ufc-fighters-statistics">Dataset &rarr;</a></div>
 </footer>
 
 <script>
-const FEAT_LABELS={net_strike_edge:'Net strike edge',sub_diff:'Submission threat',slpm_diff:'Strike output',def_ratio:'Defense ratio',td_diff:'Takedown diff',str_acc_diff:'Strike accuracy',td_def_diff:'TD defense',sapm_diff:'Strikes absorbed',net_grapple_edge:'Net grapple edge',str_def_diff:'Strike defense',td_acc_diff:'TD accuracy',style_mismatch:'Style mismatch'};
+const FEAT_LABELS={net_strike_edge:'Net strike edge',sub_diff:'Submission threat',slpm_diff:'Strike output',def_ratio:'Defense ratio',td_diff:'Takedown diff',str_acc_diff:'Strike accuracy',td_def_diff:'TD defense',sapm_diff:'Strikes absorbed',net_grapple_edge:'Net grapple edge',str_def_diff:'Strike defense',td_acc_diff:'TD accuracy',style_mismatch:'Style mismatch',striker_diff:'Striker score',wrestler_diff:'Wrestler score',ko_rate_diff:'KO rate',sub_rate_diff:'Sub rate',absorption_ratio:'Absorption ratio',grapple_dominance:'Grapple dominance',style_clash:'Style clash',weight_class:'Weight class'};
 let f1Sel='',f2Sel='';
 
 function debounce(fn,ms){let t;return(...a)=>{clearTimeout(t);t=setTimeout(()=>fn(...a),ms);}}
@@ -235,7 +238,6 @@ function debounce(fn,ms){let t;return(...a)=>{clearTimeout(t);t=setTimeout(()=>f
 function setupInput(inputId,ddId,selVar){
   const inp=document.getElementById(inputId);
   const dd=document.getElementById(ddId);
-
   const doSearch=debounce(async(q)=>{
     if(q.length<2){dd.innerHTML='';dd.classList.remove('open');return;}
     try{
@@ -245,21 +247,13 @@ function setupInput(inputId,ddId,selVar){
       dd.classList.toggle('open',names.length>0);
     }catch(e){dd.classList.remove('open');}
   },180);
-
-  inp.addEventListener('input',e=>{
-    if(selVar==='f1')f1Sel=''; else f2Sel='';
-    doSearch(e.target.value);
-  });
-
+  inp.addEventListener('input',e=>{if(selVar==='f1')f1Sel='';else f2Sel='';doSearch(e.target.value);});
+  inp.addEventListener('blur',()=>{setTimeout(()=>dd.classList.remove('open'),150);});
   inp.addEventListener('keydown',e=>{
     const items=[...dd.querySelectorAll('.dd-item')];
     if(e.key==='ArrowDown'&&items.length){e.preventDefault();items[0].focus();}
-    if(e.key==='Enter'){
-      if(items.length){pick(items[0].textContent,inputId,ddId,selVar);}
-      else if(inputId==='f1')document.getElementById('f2').focus();
-    }
+    if(e.key==='Enter'){if(items.length){pick(items[0].textContent,inputId,ddId,selVar);}else if(inputId==='f1')document.getElementById('f2').focus();}
   });
-
   dd.addEventListener('keydown',e=>{
     const items=[...dd.querySelectorAll('.dd-item')];
     const idx=items.indexOf(document.activeElement);
@@ -267,21 +261,14 @@ function setupInput(inputId,ddId,selVar){
     if(e.key==='ArrowUp'){e.preventDefault();if(idx>0)items[idx-1].focus();else inp.focus();}
     if(e.key==='Enter'&&idx>=0)pick(items[idx].textContent,inputId,ddId,selVar);
   });
-
-  dd.addEventListener('mousedown',e=>{
-    const item=e.target.closest('.dd-item');
-    if(item){e.preventDefault();pick(item.textContent,inputId,ddId,selVar);}
-  });
-
-  document.addEventListener('click',e=>{
-    if(!inp.contains(e.target)&&!dd.contains(e.target))dd.classList.remove('open');
-  });
+  dd.addEventListener('mousedown',e=>{const item=e.target.closest('.dd-item');if(item){e.preventDefault();pick(item.textContent,inputId,ddId,selVar);}});
+  document.addEventListener('click',e=>{if(!inp.contains(e.target)&&!dd.contains(e.target))dd.classList.remove('open');});
 }
 
 function pick(name,inputId,ddId,selVar){
   document.getElementById(inputId).value=name;
   document.getElementById(ddId).classList.remove('open');
-  if(selVar==='f1')f1Sel=name; else f2Sel=name;
+  if(selVar==='f1')f1Sel=name;else f2Sel=name;
   if(inputId==='f1')document.getElementById('f2').focus();
 }
 
