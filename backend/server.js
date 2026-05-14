@@ -6,7 +6,6 @@ const path = require('path');
 const app = express();
 app.use(cors());
 app.use(express.json());
-app.use(express.static(path.join(__dirname, '../frontend/dist')));
 
 let MODEL = null;
 let FIGHTERS = null;
@@ -54,15 +53,17 @@ function runModel(feats) {
   return sigmoid(logit);
 }
 
-// Serve landing page at root
+// Landing page at root — registered BEFORE static middleware so it wins
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, '../landing.html'));
 });
 
+// React app at /app
 app.get('/app', (req, res) => {
   res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
 });
 
+// API routes
 app.get('/api/fighters', (req, res) => {
   const q = (req.query.q || '').toLowerCase();
   const matches = q.length < 2
@@ -94,12 +95,12 @@ app.post('/api/predict', (req, res) => {
     confidence: conf,
     shap_breakdown: shap,
     stats: [
-      { label: 'Sig. strikes/min', f1: s1.slpm, f2: s2.slpm, unit: '' },
-      { label: 'Strike accuracy', f1: s1.str_acc, f2: s2.str_acc, unit: '%' },
-      { label: 'Strike defense', f1: s1.str_def, f2: s2.str_def, unit: '%' },
-      { label: 'Takedown avg', f1: s1.td_avg, f2: s2.td_avg, unit: '/15m' },
-      { label: 'Takedown defense', f1: s1.td_def, f2: s2.td_def, unit: '%' },
-      { label: 'Submission avg', f1: s1.sub_avg, f2: s2.sub_avg, unit: '/15m' },
+      { label: 'Sig. strikes/min', f1: s1.slpm,    f2: s2.slpm,    unit: '' },
+      { label: 'Strike accuracy',  f1: s1.str_acc,  f2: s2.str_acc, unit: '%' },
+      { label: 'Strike defense',   f1: s1.str_def,  f2: s2.str_def, unit: '%' },
+      { label: 'Takedown avg',     f1: s1.td_avg,   f2: s2.td_avg,  unit: '/15m' },
+      { label: 'Takedown defense', f1: s1.td_def,   f2: s2.td_def,  unit: '%' },
+      { label: 'Submission avg',   f1: s1.sub_avg,  f2: s2.sub_avg, unit: '/15m' },
     ].filter(r => r.f1 !== 0 || r.f2 !== 0),
     global_shap: DATA.global_shap,
     reliability: DATA.reliability,
@@ -108,7 +109,11 @@ app.post('/api/predict', (req, res) => {
   });
 });
 
-app.get('/*', (req, res) => {
+// Static files for /app route (React build) — AFTER route handlers
+app.use(express.static(path.join(__dirname, '../frontend/dist')));
+
+// Fallback
+app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
 });
 
