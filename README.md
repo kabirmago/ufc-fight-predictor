@@ -161,7 +161,7 @@ Reliability curve shows the blended model is well-calibrated.
 
 ## ELO system
 
-Built from all 5,334 fights (2015–2025), processed chronologically. Starting ELO: 1500. K-factor: 32 for first 10 fights, 24 for fights 10–20, 20 thereafter. Every prediction uses pre-fight ELO (the rating before the fight being predicted), so there's no temporal leakage.
+Built from all 5,334 fights (2015–2025), processed chronologically. This is fewer than the 10,006 training rows because the training set includes mirror pairs (each fight appears twice, once per fighter as F1) and applies a quality filter; the ELO system processes each fight exactly once in chronological order. Starting ELO: 1500. K-factor: 32 for first 10 fights, 24 for fights 10–20, 20 thereafter. Every prediction uses pre-fight ELO (the rating before the fight being predicted), so there's no temporal leakage.
 
 Top ELO ratings (as of Dec 2025): Islam Makhachev (1702), Amanda Nunes (1656), Kamaru Usman (1655), Valentina Shevchenko (1655), Khamzat Chimaev (1649), Ilia Topuria (1649).
 
