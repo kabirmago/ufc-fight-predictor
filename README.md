@@ -1,22 +1,124 @@
 # UFC Fight Predictor
 
-XGBoost + ELO model trained on 10,006 UFC fights (2015–2025). Type two fighters, get a blended prediction with SHAP explanations.
+XGBoost + ELO model trained on 10,006 UFC fights (2015–2025). Pass two fighter names, get a blended win probability with SHAP explanations.
 
 **65.1% cross-validated accuracy.** Baseline (best single stat) tops out around 54%. ELO alone gets 58.2%. The combined model beats both.
 
 ---
 
-## What it does
+## How it works
 
 For any two fighters, it computes 22 features across striking, grappling, defense, style membership, and ELO rating differential. Those go into a gradient-boosted tree. The final prediction blends the XGBoost output (60%) with an ELO-implied win probability (40%) to anchor extreme predictions and reduce overconfidence.
 
-The browser runs a logistic surrogate of the XGBoost model with 92.2% agreement, so predictions are instant.
+The surrogate runs a logistic approximation of the XGBoost model with 92.2% agreement, so predictions are instant with no Python dependency.
+
+---
+
+## Quick start
+
+```bash
+npm install  # no dependencies — Node.js only
+```
+
+```js
+const { predict, searchFighters } = require('./predictor');
+const data = require('./data/dashboard_v2.json');
+
+// Search fighters
+const matches = searchFighters('makh', data);
+console.log(matches); // ['Islam Makhachev', ...]
+
+// Predict a fight
+const result = predict('Islam Makhachev', 'Alexander Volkanovski', 'Lightweight', data);
+console.log(result);
+// {
+//   predicted_winner: 'Islam Makhachev',
+//   confidence: 'medium',
+//   f1_win_prob: 0.553,
+//   f2_win_prob: 0.447,
+//   algo_prob: 0.531,
+//   elo_prob: 0.583,
+//   elo_f1: 1702,
+//   elo_f2: 1634,
+//   shap_breakdown: [ ... ],
+//   model_accuracy: 0.651,
+//   n_fights_trained: 10006
+// }
+```
+
+---
+
+## Integrating into a web app
+
+### Express.js
+
+```js
+const express = require('express');
+const { predict, searchFighters } = require('./predictor');
+const data = require('./data/dashboard_v2.json');
+
+const app = express();
+app.use(express.json());
+
+app.get('/fighters', (req, res) => {
+  res.json(searchFighters(req.query.q || '', data));
+});
+
+app.post('/predict', (req, res) => {
+  const { f1, f2, weight_class } = req.body;
+  if (!f1 || !f2) return res.status(400).json({ error: 'Both fighter names required' });
+  res.json(predict(f1, f2, weight_class, data));
+});
+
+app.listen(3000);
+```
+
+### Next.js API route
+
+```js
+// pages/api/predict.js
+import { predict } from '../../predictor';
+import data from '../../data/dashboard_v2.json';
+
+export default function handler(req, res) {
+  const { f1, f2, weight_class } = req.body;
+  res.json(predict(f1, f2, weight_class, data));
+}
+```
+
+### Browser (client-side)
+
+Load `dashboard_v2.json` via fetch, then call `predict()` directly — no server needed.
+
+```js
+const data = await fetch('/data/dashboard_v2.json').then(r => r.json());
+const result = predict('Khamzat Chimaev', 'Robert Whittaker', 'Middleweight', data);
+```
+
+---
+
+## API
+
+### `predict(f1, f2, weightClass, data)`
+
+| Param | Type | Description |
+|---|---|---|
+| `f1` | string | Fighter 1 name (must match `data.fighter_stats` key) |
+| `f2` | string | Fighter 2 name |
+| `weightClass` | string | e.g. `'Lightweight'`, `'Middleweight'` |
+| `data` | object | Parsed `dashboard_v2.json` |
+
+Returns an object with `predicted_winner`, `confidence`, `f1_win_prob`, `f2_win_prob`, `algo_prob`, `elo_prob`, `elo_f1`, `elo_f2`, `shap_breakdown`, `model_accuracy`, `n_fights_trained`.
+
+### `searchFighters(query, data, limit?)`
+
+Fuzzy fighter name search. Returns up to `limit` matching names (default 12).
 
 ---
 
 ## Why ELO + algo
 
-The previous model (career stats only) predicted Jon Jones 89% over Pereira. The blended model outputs ~58% Jones — much closer to reality given Pereira KO’d Jones at UFC 309. ELO captures recent form and fight-by-fight momentum that career averages miss entirely.
+The previous model (career stats only) predicted Jon Jones 89% over Pereira. The blended model outputs ~58% Jones — much closer to reality given Pereira KO'd Jones at UFC 309. ELO captures recent form and fight-by-fight momentum that career averages miss entirely.
 
 ELO alone has 58.2% accuracy. The algo alone hits 65.1%. Combined they hit 65.1% with substantially better calibration on extreme matchups — fewer 85%+ predictions that turn out to be wrong.
 
@@ -34,7 +136,7 @@ But ELO gap and ELO win probability are now the 2nd and 3rd most important featu
 
 ![SHAP feature importance](assets/shap_importance.png)
 
-Reliability curve on the right shows the blended model is well-calibrated. The comparison bars show each method’s accuracy.
+Reliability curve shows the blended model is well-calibrated.
 
 ![Reliability and model comparison](assets/reliability_curve.png)
 
@@ -59,41 +161,9 @@ Reliability curve on the right shows the blended model is well-calibrated. The c
 
 ## ELO system
 
-Built from all 5,334 fights (2015–2025), processed chronologically. Starting ELO: 1500. K-factor: 32 for first 10 fights, 24 for fights 10–20, 20 thereafter. Every prediction uses pre-fight ELO (the rating before the fight being predicted), so there’s no temporal leakage.
+Built from all 5,334 fights (2015–2025), processed chronologically. Starting ELO: 1500. K-factor: 32 for first 10 fights, 24 for fights 10–20, 20 thereafter. Every prediction uses pre-fight ELO (the rating before the fight being predicted), so there's no temporal leakage.
 
 Top ELO ratings (as of Dec 2025): Islam Makhachev (1702), Amanda Nunes (1656), Kamaru Usman (1655), Valentina Shevchenko (1655), Khamzat Chimaev (1649), Ilia Topuria (1649).
-
----
-
-## How it was built
-
-Ufcstats.com blocks cloud scrapers, so data came from two Kaggle datasets: [UFC Fighters Statistics](https://www.kaggle.com/datasets/asaniczka/ufc-fighters-statistics) for per-minute career stats, and the [UFC 2025 dataset](https://www.kaggle.com/datasets/aminealibi/ufc-fights-fighters-and-events-dataset) for fight results through December 2025 and style membership scores.
-
-Iterations:
-
-1. Base XGBoost, 12 career-stat features → 63.7% CV
-2. Added 2025 fight results → 63.8%
-3. Added style membership (striker/wrestler ML clusters) → 64.1%
-4. Added weight class, quality filter → 64.2%
-5. Added ELO system (3 ELO features) → **65.1%**, much better calibration on extremes
-6. Tried Platt scaling, isotonic regression → no improvement (model was already well-calibrated)
-7. Tried ensemble (XGB + RF + GB) → worse
-
----
-
-## Validation
-
-| Fight | Algo | ELO | Blend | Odds | Result |
-|---|---|---|---|---|---|
-| Jones vs Pereira | Jones 65% | Jones 49% | Jones 58% | Jones fav | Pereira KO R3 |
-| Makhachev vs Volkanovski | Makhachev 53% | Makhachev 58% | Makhachev 55% | Makhachev fav | Makhachev UD |
-| Khabib vs McGregor | Khabib 81% | Khabib 60% | Khabib 72% | Khabib -180 | Khabib sub R4 |
-| Strickland vs Adesanya | Strickland 57% | Strickland 48% | Strickland 53% | Adesanya -300 | Strickland UD |
-| Topuria vs Gaethje | Topuria 74% | Topuria 60% | Topuria 68% | Topuria fav | Upcoming |
-
-Jones vs Pereira is the honest miss: the algo still has Jones 65% (career grappling), ELO pulls it to 58% (they were nearly even on recent form). Pereira won by KO in R3 — a result that required knowing Pereira’s finishing power and Jones’s ring rust, neither of which appear in public stats.
-
-Strickland vs Chimaev: algo 24%, ELO 41%, blend 31%. Strickland won via split decision at UFC 328 as a 4-to-1 underdog. Vegas was wrong too.
 
 ---
 
@@ -113,6 +183,22 @@ Three checks were run.
 
 ---
 
+## How it was built
+
+Ufcstats.com blocks cloud scrapers, so data came from two Kaggle datasets: [UFC Fighters Statistics](https://www.kaggle.com/datasets/asaniczka/ufc-fighters-statistics) for per-minute career stats, and the [UFC 2025 dataset](https://www.kaggle.com/datasets/aminealibi/ufc-fights-fighters-and-events-dataset) for fight results through December 2025 and style membership scores.
+
+Iterations:
+
+1. Base XGBoost, 12 career-stat features → 63.7% CV
+2. Added 2025 fight results → 63.8%
+3. Added style membership (striker/wrestler ML clusters) → 64.1%
+4. Added weight class, quality filter → 64.2%
+5. Added ELO system (3 ELO features) → **65.1%**, much better calibration on extremes
+6. Tried Platt scaling, isotonic regression → no improvement (model was already well-calibrated)
+7. Tried ensemble (XGB + RF + GB) → worse
+
+---
+
 ## Stack
 
 | Layer | Tech |
@@ -123,25 +209,3 @@ Three checks were run.
 | Blend | 60% algo + 40% ELO |
 | Explainability | SHAP TreeExplainer |
 | JS surrogate | Logistic regression on XGBoost outputs |
-| Backend | Express.js |
-| Frontend | React/Vite + Framer Motion |
-| Auth | Supabase |
-| Deploy | Railway |
-
----
-
-## Run locally
-
-```bash
-npm install
-cd frontend && npm install && npm run build && cd ..
-npm start
-```
-
-## API
-
-```
-GET  /api/fighters?q=makh        fuzzy fighter search
-POST /api/predict                 body: { f1, f2, weight_class }
-                                  returns blend + algo + ELO probs + SHAP
-```
